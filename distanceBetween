@@ -1,0 +1,7 @@
+float distanceBetween(float firstPosition[3], float secondPosition[3]) {
+    float distance[3];
+    for(int i=0; i<3; i++) {
+        distance[i] = secondPosition[i] - firstPosition[i];
+    }
+    return mathVecMagnitude(distance, 3);
+}
