@@ -1,0 +1,110 @@
+//Declare any variables shared between functions here
+int counter;
+float spinattitude[3];
+float stopattitude[3];
+float myZRState[12];
+float targetRate[3];
+float drillspot[3];
+int drilled;
+float position[2];
+float velocity[3];
+float speed;
+
+void init(){
+	//This function is called once when your code is first loaded.
+	counter = 0;
+	spinattitude[0] = .5;
+	spinattitude[1] = .5;
+	spinattitude[2] = .5;
+	stopattitude[0] = 0;
+	stopattitude[1] = 0;
+	stopattitude[2] = 0;
+	//DEBUG(("%f",distanceBetween(spinattitude, stopattitude)));
+	drillspot[0] = 0.2;
+	drillspot[1] = 0.2;
+	drillspot[2] = 0;
+	drilled = 0;
+}
+
+void loop(){
+    api.getMyZRState(myZRState);
+    DEBUG(("Counter = %d", counter));
+	
+	//Step 0: Start Drill
+	if(counter == 0){
+	    game.startDrill();
+	    counter++;
+	}
+	
+	//Setp 1: Rotate and Pickup
+	if(counter == 1){
+	    position[0] = myZRState[0];
+	    position[1] = myZRState[1];
+	    if(game.isGeyserHere(position)){
+	        game.stopDrill();
+	        DEBUG(("Drill stopped here!"));
+	        counter+=2;
+	    }
+	    api.setPositionTarget(drillspot);
+	    api.setAttRateTarget(spinattitude);
+	    api.getMyZRState(myZRState);
+	    //Check for next step
+	    if(game.checkSample()){
+	        game.pickupSample();
+	        api.setPositionTarget(drillspot);
+	        api.setAttRateTarget(spinattitude);
+	        if(game.getNumSamplesHeld() < 3){
+	            counter = counter - 1;
+	        }
+	        else{
+	            api.setPositionTarget(drillspot);
+	            counter++;
+	        }
+	    }
+	}
+	//Step 2: Stop Drill
+	if(counter == 2){
+	    game.stopDrill();
+	    counter++;
+	}
+	
+	//Step 3: Stop Rotation & Return to Base
+	if(counter == 3){
+	    api.setAttRateTarget(stopattitude);
+	    api.getMyZRState(myZRState);
+	    api.setPositionTarget(stopattitude);
+	    //Check for next step
+	    if(game.atBaseStation()){
+	        counter++;
+	    }
+	}
+	
+	//Step 5: Drop Sample
+	if(counter == 4){
+	    game.dropSample(0);
+	    game.dropSample(1);
+	    game.dropSample(2);
+	    counter++;
+	}
+	
+	//Step 6: Set New Drill Spot
+	if(counter == 5){
+	    drillspot[0] = drillspot[0] + .08;
+	    counter++;
+	}
+	
+	//Step 6: Go to Drill Spot
+	if(counter == 6){
+	    api.setPositionTarget(drillspot);
+	    api.getMyZRState(myZRState);
+	    //Check for next step
+	    velocity[0] = myZRState[3];
+	    velocity[1] = myZRState[4];
+	    velocity[2] = myZRState[5];
+	    speed = mathVecMagnitude(velocity,3);
+	    DEBUG(("Speed = %d", speed));
+	    if(fabsf(myZRState[0] - drillspot[0]) < .04 && fabsf(myZRState[1] - drillspot[1]) < .04) {
+	        counter = 0;
+	    }
+	}
+}
